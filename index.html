@@ -223,8 +223,14 @@
                 <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
                 <span class="text-xs font-bold text-slate-600 uppercase tracking-widest" id="streamIndicator">KAMERA LIVE</span>
               </div>
-              <div class="text-xs font-semibold text-indigo-600" id="jarakKalkulasi">
-                Target: Kantor Apartemen Purimas
+              <div class="flex items-center gap-2">
+                <!-- Dropdown / Switch Kamera Depan/Belakang -->
+                <button onclick="toggleCameraFacing()" id="toggleCamFacingBtn" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                  <i class="fa-solid fa-camera-rotate"></i> Kamera: Depan
+                </button>
+                <div class="text-xs font-semibold text-indigo-600" id="jarakKalkulasi">
+                  Target: Kantor Apartemen Purimas
+                </div>
               </div>
             </div>
 
@@ -442,6 +448,11 @@
 
   <!-- SCRIPT KODE UTAMA -->
   <script>
+    // ==========================================
+    // 🔧 CONFIG: MASUKKAN URL API WEB APP APPS SCRIPT DI SINI
+    // ==========================================
+    const HARDCODED_API_URL = "https://script.google.com/macros/s/AKfycbyQ87FZPp49PdqrJt22ZccKtK3ACgsp2GWdBMQ-AqwpMm_iuF5-3uphkug9zU-F4LhEfg/exec"; // Ganti dengan URL deployment Google Apps Script Anda
+
     // Koordinat Kantor Default
     const KANTOR_LAT = -7.334070094702493;
     const KANTOR_LNG = 112.78542927116439;
@@ -451,16 +462,23 @@
     let localLng = null;
     let localJarak = null;
     let mediaStreamGlobal = null;
+    let currentFacingMode = "user"; // "user" (depan) atau "environment" (belakang)
     
     // Simpan list data rekap untuk pencarian/filter di frontend
     let globalPresensiData = [];
 
     // On Load
     window.onload = function() {
-      // Muat Endpoint URL jika sudah tersimpan di localStorage
-      const savedUrl = localStorage.getItem("absensi_api_url");
-      if (savedUrl) {
-        document.getElementById("apiUrlInput").value = savedUrl;
+      // Periksa apakah URL Apps Script sudah di-hardcode
+      if (HARDCODED_API_URL && !HARDCODED_API_URL.includes("YOUR_ID_HERE")) {
+        // Sembunyikan banner input konfigurasi agar karyawan tidak bingung
+        document.getElementById("configBanner").classList.add("hidden");
+      } else {
+        // Muat Endpoint URL jika sudah tersimpan di localStorage sebagai cadangan
+        const savedUrl = localStorage.getItem("absensi_api_url");
+        if (savedUrl) {
+          document.getElementById("apiUrlInput").value = savedUrl;
+        }
       }
       
       // Update radio button style
@@ -489,6 +507,10 @@
     }
 
     function getApiUrl() {
+      // Prioritaskan URL hardcoded jika tersedia dan valid, jika tidak ambil dari input/localStorage
+      if (HARDCODED_API_URL && !HARDCODED_API_URL.includes("YOUR_ID_HERE")) {
+        return HARDCODED_API_URL;
+      }
       return localStorage.getItem("absensi_api_url") || "";
     }
 
@@ -703,7 +725,12 @@
 
       camStatusText.innerText = "Meminta izin kamera...";
 
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+      // Stop track aktif sebelumnya jika ada (untuk pergantian kamera depan/belakang)
+      if (mediaStreamGlobal) {
+        mediaStreamGlobal.getTracks().forEach(track => track.stop());
+      }
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode }, audio: false })
         .then((stream) => {
           mediaStreamGlobal = stream;
           video.srcObject = stream;
@@ -726,6 +753,23 @@
     }
 
     /**
+     * TOGGLE FACING MODE (FRONT / BACK)
+     */
+    function toggleCameraFacing() {
+      currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+      
+      const btn = document.getElementById("toggleCamFacingBtn");
+      btn.innerHTML = `<i class="fa-solid fa-camera-rotate"></i> Kamera: ${currentFacingMode === 'user' ? 'Depan' : 'Belakang'}`;
+      
+      showToast(`Mengalihkan ke Kamera ${currentFacingMode === 'user' ? 'Depan' : 'Belakang'}...`, "info");
+      
+      // Jika kamera sedang menyala, muat ulang streamnya langsung
+      if (mediaStreamGlobal) {
+        requestCameraPermission();
+      }
+    }
+
+    /**
      * TAKE SNAPSHOT FROM VIDEO
      */
     function takeSelfie() {
@@ -743,9 +787,11 @@
       canvas.height = video.videoHeight || 480;
       const ctx = canvas.getContext("2d");
       
-      // Mirror image untuk selfie normal
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
+      // Mirror image hanya jika memakai kamera depan (selfie normal)
+      if (currentFacingMode === "user") {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
       
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       
@@ -798,7 +844,7 @@
     function submitAttendance() {
       const apiUrl = getApiUrl();
       if (!apiUrl) {
-        showToast("Tautan API Apps Script belum diset! Silakan atur di bagian atas.", "error");
+        showToast("Tautan API Apps Script belum diset!", "error");
         return;
       }
 
@@ -816,6 +862,20 @@
         if (rad.checked) {
           tipeSelected = rad.value;
           break;
+        }
+      }
+
+      // ==========================================
+      // 🛡️ ANTI-FRAUD / DETEKSI DOUBLE SUBMISSION (5 MENIT THROTTLE)
+      // ==========================================
+      const keyLastSubmission = `last_sub_${email.toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
+      const lastSub = JSON.parse(localStorage.getItem(keyLastSubmission) || "null");
+      
+      if (lastSub && lastSub.tipe === tipeSelected) {
+        const selisihWaktu = (Date.now() - lastSub.timestamp) / 1000 / 60; // dalam menit
+        if (selisihWaktu < 5) {
+          showToast(`Anti-Fraud: Anda terdeteksi baru saja melakukan Absen ${tipeSelected} ${Math.round(selisihWaktu)} menit yang lalu. Harap tunggu hingga 5 menit sebelum absen kembali!`, "error");
+          return;
         }
       }
 
@@ -844,6 +904,13 @@
       .then(() => {
         // Karena no-cors, peramban mengembalikan response buram, tetapi data sukses masuk ke Apps Script
         showToast(`Absensi '${tipeSelected}' berhasil dikirim ke database!`, "success");
+        
+        // Simpan data log absensi terakhir ke local storage untuk anti-fraud tracker
+        localStorage.setItem(keyLastSubmission, JSON.stringify({
+          timestamp: Date.now(),
+          tipe: tipeSelected
+        }));
+
         resetSelfie();
         
         // Simpan nama/email terakhir di memory agar user tidak mengisi ulang
@@ -915,7 +982,7 @@
     function fetchRekapData() {
       const apiUrl = getApiUrl();
       if (!apiUrl) {
-        showToast("Untuk melihat Dashboard Rekap, isi Endpoint API Apps Script terlebih dahulu.", "warning");
+        showToast("Untuk melihat Dashboard Rekap, konfigurasi API Apps Script terlebih dahulu.", "warning");
         return;
       }
 
