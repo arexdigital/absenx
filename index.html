@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Absensi Karyawan Premium - GPS & Selfie Kamera</title>
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .custom-gradient {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col transition-colors duration-300" id="appBody">
+
+  <!-- TOP BAR / HEADER -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 transition-colors duration-300 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+          <i class="fa-solid fa-fingerprint text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 tracking-tight">PresensiKita</h1>
+          <p class="text-xs text-slate-500 font-medium">GPS Geofencing & Selfie</p>
+        </div>
+      </div>
+
+      <!-- Theme Switch & Menu Buttons -->
+      <div class="flex items-center gap-3">
+        <button id="themeToggleBtn" onclick="toggleDarkMode()" class="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600">
+          <i class="fa-solid fa-moon" id="themeIcon"></i>
+        </button>
+        <div class="hidden md:flex gap-1 bg-slate-100 p-1 rounded-lg">
+          <button onclick="switchTab('presensi')" id="tabBtn-presensi" class="px-4 py-2 text-sm font-medium rounded-md bg-white text-slate-800 shadow-sm transition">
+            <i class="fa-solid fa-camera-retro mr-2"></i>Absen Sekarang
+          </button>
+          <button onclick="switchTab('cuti')" id="tabBtn-cuti" class="px-4 py-2 text-sm font-medium rounded-md text-slate-600 hover:text-slate-800 transition">
+            <i class="fa-solid fa-calendar-plus mr-2"></i>Pengajuan Cuti
+          </button>
+          <button onclick="switchTab('admin')" id="tabBtn-admin" class="px-4 py-2 text-sm font-medium rounded-md text-slate-600 hover:text-slate-800 transition">
+            <i class="fa-solid fa-chart-pie mr-2"></i>Dashboard Rekap
+          </button>
+        </div>
+        
+        <!-- Mobile Menu Toggle -->
+        <button id="mobileMenuBtn" onclick="toggleMobileNav()" class="md:hidden w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MOBILE NAVIGATION DRAWER -->
+  <div id="mobileDrawer" class="fixed inset-0 bg-slate-900/40 z-50 hidden transition-opacity duration-300">
+    <div class="fixed top-0 right-0 w-[80vw] max-w-sm h-full bg-white shadow-2xl p-6 flex flex-col justify-between transform transition-transform duration-300">
+      <div>
+        <div class="flex items-center justify-between mb-8">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+              <i class="fa-solid fa-fingerprint text-sm"></i>
+            </div>
+            <span class="font-bold text-slate-900">Menu Navigasi</span>
+          </div>
+          <button onclick="toggleMobileNav()" class="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center text-slate-500">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="space-y-3">
+          <button onclick="switchTab('presensi'); toggleMobileNav();" class="w-full text-left p-3 rounded-lg flex items-center gap-3 bg-indigo-50 text-indigo-600 font-semibold" id="mTabBtn-presensi">
+            <i class="fa-solid fa-camera-retro w-5 text-center text-lg"></i> Absen Sekarang
+          </button>
+          <button onclick="switchTab('cuti'); toggleMobileNav();" class="w-full text-left p-3 rounded-lg flex items-center gap-3 text-slate-600 hover:bg-slate-50 font-medium" id="mTabBtn-cuti">
+            <i class="fa-solid fa-calendar-plus w-5 text-center text-lg"></i> Pengajuan Cuti
+          </button>
+          <button onclick="switchTab('admin'); toggleMobileNav();" class="w-full text-left p-3 rounded-lg flex items-center gap-3 text-slate-600 hover:bg-slate-50 font-medium" id="mTabBtn-admin">
+            <i class="fa-solid fa-chart-pie w-5 text-center text-lg"></i> Dashboard Rekap
+          </button>
+        </div>
+      </div>
+      <div class="border-t border-slate-100 pt-4 text-center">
+        <p class="text-xs text-slate-400">PresensiKita v2.0 &bull; Secure API HTTPS</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full px-4"></div>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- SETTINGS / CONFIGURATION BANNER (MANDATORY) -->
+    <div class="mb-6 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center gap-4 shadow-sm" id="configBanner">
+      <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+        <i class="fa-solid fa-gears text-lg"></i>
+      </div>
+      <div class="flex-grow">
+        <h4 class="font-bold text-sm text-amber-900">Konfigurasi Apps Script API</h4>
+        <p class="text-xs text-amber-700 mt-1 leading-relaxed">
+          Sistem ini berkomunikasi langsung dengan Google Apps Script Web App untuk melacak koordinat GPS &amp; menyimpan berkas kamera. Tempel tautan Deploy Web App Anda di bawah untuk mengaktifkannya.
+        </p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec" 
+                 class="px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs w-full max-w-md focus:outline-indigo-500 text-slate-800 font-mono">
+          <button onclick="saveApiUrl()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow transition">
+            Simpan Endpoint API
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: ABSENSI SEKARANG (CAMERA & GPS) -->
+    <section id="tab-presensi" class="space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- KOLOM FORM & DATA -->
+        <div class="lg:col-span-5 space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <h2 class="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+              <i class="fa-solid fa-address-card text-indigo-500"></i> Informasi Karyawan
+            </h2>
+            <p class="text-xs text-slate-500 mb-5">Lengkapi identitas sebelum melakukan absensi.</p>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Nama Lengkap</label>
+                <div class="relative">
+                  <i class="fa-regular fa-user absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                  <input type="text" id="karyawanNama" placeholder="Contoh: Budi Santoso" 
+                         class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Email / ID Karyawan</label>
+                <div class="relative">
+                  <i class="fa-regular fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                  <input type="email" id="karyawanEmail" placeholder="Contoh: budi@perusahaan.com" 
+                         class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Tipe Absen</label>
+                <div class="grid grid-cols-2 gap-3 mt-1">
+                  <label class="border-2 border-indigo-600 rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer bg-indigo-50/50 text-indigo-600 font-bold transition" id="lblTipeMasuk">
+                    <input type="radio" name="tipeAbsen" value="Masuk" checked class="hidden" onchange="updateTipeAbsenSelector()">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Masuk Kerja
+                  </label>
+                  <label class="border-2 border-slate-200 rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 font-semibold text-slate-600 transition" id="lblTipePulang">
+                    <input type="radio" name="tipeAbsen" value="Pulang" class="hidden" onchange="updateTipeAbsenSelector()">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Pulang Kerja
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STATUS PERMISSIONS & RADAR -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-slate-900 tracking-wider uppercase">Verifikasi Status</h3>
+            
+            <!-- GPS Status -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600" id="gpsIconBox">
+                  <i class="fa-solid fa-location-crosshairs text-lg"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-700">Geolokasi &amp; GPS</h4>
+                  <p class="text-[11px] text-slate-500" id="gpsStatusText">Belum dideteksi</p>
+                </div>
+              </div>
+              <button onclick="requestGpsPermission()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow transition">
+                Aktifkan GPS
+              </button>
+            </div>
+
+            <!-- Kamera Status -->
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600" id="camIconBox">
+                  <i class="fa-solid fa-camera text-lg"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-700">Akses Kamera</h4>
+                  <p class="text-[11px] text-slate-500" id="cameraStatusText">Minta izin akses</p>
+                </div>
+              </div>
+              <button onclick="requestCameraPermission()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow transition">
+                Aktifkan Kamera
+              </button>
+            </div>
+            
+            <!-- Panduan Solusi jika Izin ditolak -->
+            <div id="permissionGuide" class="hidden p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+              <p class="font-bold mb-1"><i class="fa-solid fa-circle-exclamation mr-1"></i> Izin Ditolak/Bermasalah</p>
+              <ul class="list-disc pl-4 space-y-1">
+                <li>Buka pengaturan peramban/browser Anda.</li>
+                <li>Pastikan situs ini dijalankan di bawah protokol <strong>HTTPS</strong>.</li>
+                <li>Atur izin lokasi dan kamera ke <strong>Izinkan (Allow)</strong> untuk situs ini.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- KOLOM INTERAKTIF CAMERA & GEOFENCING -->
+        <div class="lg:col-span-7 space-y-6">
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col">
+            <!-- Header Frame -->
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                <span class="text-xs font-bold text-slate-600 uppercase tracking-widest" id="streamIndicator">KAMERA LIVE</span>
+              </div>
+              <div class="text-xs font-semibold text-indigo-600" id="jarakKalkulasi">
+                Target: Kantor Apartemen Purimas
+              </div>
+            </div>
+
+            <!-- Kamera Box Viewport -->
+            <div class="relative bg-slate-900 aspect-video w-full flex items-center justify-center text-white overflow-hidden" id="cameraContainer">
+              <!-- Video Stream -->
+              <video id="webcam" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+              
+              <!-- Hasil Foto Sementara -->
+              <img id="selfieSnapshot" class="w-full h-full object-cover hidden" alt="Selfie Karyawan">
+
+              <!-- Placeholder Ketiadaan Feed Kamera -->
+              <div id="videoPlaceholder" class="flex flex-col items-center justify-center p-8 text-center space-y-3 z-10">
+                <div class="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                  <i class="fa-solid fa-video-slash text-2xl"></i>
+                </div>
+                <h4 class="font-bold text-slate-200">Kamera Belum Aktif</h4>
+                <p class="text-xs text-slate-400 max-w-sm">Klik "Aktifkan Kamera" di panel samping untuk memulai kamera selfie identifikasi wajah.</p>
+              </div>
+
+              <!-- Radar Overlay Geofence -->
+              <div class="absolute bottom-4 left-4 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700/50 flex items-center gap-2 text-xs">
+                <i class="fa-solid fa-circle-nodes text-green-400 animate-ping"></i>
+                <span id="radiusBanner">Radius: 100m</span>
+              </div>
+            </div>
+
+            <!-- Panel Tombol Ambil Gambar -->
+            <div class="p-6 bg-slate-50 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button onclick="takeSelfie()" id="captureBtn" disabled class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-camera"></i> Ambil Foto Selfie
+              </button>
+              <button onclick="resetSelfie()" id="retakeBtn" class="w-full py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition flex items-center justify-center gap-2 hidden">
+                <i class="fa-solid fa-arrows-rotate"></i> Foto Ulang
+              </button>
+              <button onclick="submitAttendance()" id="submitAttendanceBtn" disabled class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-paper-plane"></i> Kirim Presensi
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: PENGAJUAN CUTI / IZIN / SAKIT -->
+    <section id="tab-cuti" class="hidden space-y-6">
+      <div class="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+            <i class="fa-solid fa-file-signature text-xl"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Form Pengajuan Cuti / Izin / Sakit</h2>
+            <p class="text-xs text-slate-500">Ajukan permohonan absen kerja Anda dengan rincian lengkap.</p>
+          </div>
+        </div>
+
+        <form id="formCuti" onsubmit="submitCuti(event)" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1">Nama Karyawan</label>
+              <input type="text" id="cutiNama" required class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-indigo-500">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1">Email Anda</label>
+              <input type="email" id="cutiEmail" required class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-indigo-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Jenis Pengajuan</label>
+            <select id="cutiJenis" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-indigo-500 bg-white">
+              <option value="Sakit">Sakit (Butuh Surat Dokter)</option>
+              <option value="Izin">Izin Terencana</option>
+              <option value="Cuti Tahunan">Cuti Tahunan</option>
+              <option value="Alasan Penting">Alasan Penting / Darurat</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1">Dari Tanggal</label>
+              <input type="date" id="cutiMulai" required class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-indigo-500">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1">Sampai Tanggal</label>
+              <input type="date" id="cutiSelesai" required class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-indigo-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Keterangan / Alasan Tambahan</label>
+            <textarea id="cutiAlasan" rows="3" placeholder="Tulis rincian atau keterangan alasan Anda..." required class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-indigo-500"></textarea>
+          </div>
+
+          <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-paper-plane"></i> Kirim Pengajuan Cuti
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 3: DASHBOARD REKAP & DATA REALTIME -->
+    <section id="tab-admin" class="hidden space-y-6">
+      
+      <!-- STATISTIC CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase">Hadir Hari Ini</p>
+            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="statHadir">0</h3>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <i class="fa-solid fa-user-check text-xl"></i>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase">Luar Radius Kantor</p>
+            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="statLuar">0</h3>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
+            <i class="fa-solid fa-map-pin text-xl"></i>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase">Cuti / Izin Aktif</p>
+            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="statCuti">0</h3>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
+            <i class="fa-solid fa-user-clock text-xl"></i>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase">Batas Geofence</p>
+            <h3 class="text-2xl font-bold text-slate-900 mt-1">100m</h3>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+            <i class="fa-solid fa-circle-dot text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABEL REKAP PRESENSI -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-50">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Riwayat &amp; Rekap Absensi</h3>
+            <p class="text-xs text-slate-500">Berisi riwayat absen dan status dari seluruh karyawan.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="exportToCsv()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-2">
+              <i class="fa-solid fa-file-excel"></i> Export CSV (Excel)
+            </button>
+            <button onclick="fetchRekapData()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center gap-2">
+              <i class="fa-solid fa-sync"></i> Muat Ulang
+            </button>
+          </div>
+        </div>
+
+        <!-- SEARCH BAR -->
+        <div class="p-4 border-b border-slate-100 bg-white">
+          <div class="relative max-w-sm">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" id="rekapSearch" placeholder="Cari nama atau email..." oninput="filterRekap()"
+                   class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs focus:outline-indigo-500 text-slate-800">
+          </div>
+        </div>
+
+        <!-- TABLE VIEW -->
+        <div class="overflow-x-auto hidden md:block">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-100 text-slate-400 text-[11px] font-bold uppercase bg-slate-50/50">
+                <th class="p-4">Tanggal / Jam</th>
+                <th class="p-4">Karyawan</th>
+                <th class="p-4">Tipe</th>
+                <th class="p-4">Jarak</th>
+                <th class="p-4">Status Lokasi</th>
+                <th class="p-4">Foto Verifikasi</th>
+              </tr>
+            </thead>
+            <tbody id="rekapTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+              <!-- Baris akan dimasukkan oleh javascript -->
+              <tr id="emptyStateTable">
+                <td colspan="6" class="p-8 text-center text-slate-400">
+                  <i class="fa-solid fa-database text-3xl mb-2 block"></i>
+                  Data kosong. Masukkan Endpoint API Apps Script dan klik muat ulang.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- CARDS VIEW (MOBILE) -->
+        <div id="rekapCardsContainer" class="block md:hidden divide-y divide-slate-100 bg-white">
+          <!-- Card mobile akan dimuat di sini -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12 transition-colors duration-300">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+      <p>&copy; 2026 PresensiKita Pro. Secure Geolocation Check-In System.</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPT KODE UTAMA -->
+  <script>
+    // Koordinat Kantor Default
+    const KANTOR_LAT = -7.334070094702493;
+    const KANTOR_LNG = 112.78542927116439;
+
+    let localPhotoBase64 = "";
+    let localLat = null;
+    let localLng = null;
+    let localJarak = null;
+    let mediaStreamGlobal = null;
+    
+    // Simpan list data rekap untuk pencarian/filter di frontend
+    let globalPresensiData = [];
+
+    // On Load
+    window.onload = function() {
+      // Muat Endpoint URL jika sudah tersimpan di localStorage
+      const savedUrl = localStorage.getItem("absensi_api_url");
+      if (savedUrl) {
+        document.getElementById("apiUrlInput").value = savedUrl;
+      }
+      
+      // Update radio button style
+      updateTipeAbsenSelector();
+
+      // Cek Dark Mode preference
+      if (localStorage.getItem("darkMode") === "enabled") {
+        document.getElementById("appBody").classList.add("dark");
+        // Sederhana ubah bg color
+        document.getElementById("appBody").style.backgroundColor = "#0f172a";
+        document.getElementById("appBody").style.color = "#f1f5f9";
+      }
+    };
+
+    /**
+     * Konfigurasi API Url
+     */
+    function saveApiUrl() {
+      const url = document.getElementById("apiUrlInput").value.trim();
+      if (!url) {
+        showToast("Masukkan URL API Apps Script yang valid!", "warning");
+        return;
+      }
+      localStorage.setItem("absensi_api_url", url);
+      showToast("Tautan API Berhasil disimpan!", "success");
+    }
+
+    function getApiUrl() {
+      return localStorage.getItem("absensi_api_url") || "";
+    }
+
+    /**
+     * Dark Mode Toggle
+     */
+    function toggleDarkMode() {
+      const body = document.getElementById("appBody");
+      const icon = document.getElementById("themeIcon");
+      if (body.classList.contains("dark")) {
+        body.classList.remove("dark");
+        body.style.backgroundColor = "#f8fafc";
+        body.style.color = "#1e293b";
+        icon.className = "fa-solid fa-moon";
+        localStorage.setItem("darkMode", "disabled");
+      } else {
+        body.classList.add("dark");
+        body.style.backgroundColor = "#0f172a";
+        body.style.color = "#f1f5f9";
+        icon.className = "fa-solid fa-sun text-yellow-400";
+        localStorage.setItem("darkMode", "enabled");
+      }
+    }
+
+    /**
+     * Tab Switcher (Vanilla SPA Router)
+     */
+    function switchTab(tabId) {
+      const sections = ['presensi', 'cuti', 'admin'];
+      sections.forEach(s => {
+        const sectionEl = document.getElementById(`tab-${s}`);
+        const tabBtn = document.getElementById(`tabBtn-${s}`);
+        const mTabBtn = document.getElementById(`mTabBtn-${s}`);
+        
+        if (s === tabId) {
+          sectionEl.classList.remove('hidden');
+          if(tabBtn) {
+            tabBtn.className = "px-4 py-2 text-sm font-medium rounded-md bg-white text-indigo-600 shadow-sm transition";
+          }
+          if(mTabBtn) {
+            mTabBtn.className = "w-full text-left p-3 rounded-lg flex items-center gap-3 bg-indigo-50 text-indigo-600 font-semibold";
+          }
+        } else {
+          sectionEl.classList.add('hidden');
+          if(tabBtn) {
+            tabBtn.className = "px-4 py-2 text-sm font-medium rounded-md text-slate-600 hover:text-slate-800 transition";
+          }
+          if(mTabBtn) {
+            mTabBtn.className = "w-full text-left p-3 rounded-lg flex items-center gap-3 text-slate-600 hover:bg-slate-50 font-medium";
+          }
+        }
+      });
+
+      // Panggil rekap jika beralih ke admin
+      if (tabId === 'admin') {
+        fetchRekapData();
+      }
+    }
+
+    function toggleMobileNav() {
+      const drawer = document.getElementById("mobileDrawer");
+      drawer.classList.toggle("hidden");
+    }
+
+    /**
+     * TOAST NOTIFICATION UTILITY
+     */
+    function showToast(message, type = "info") {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      
+      let bgColor = "bg-white border-slate-200 text-slate-800";
+      let icon = "fa-solid fa-circle-info text-blue-500";
+      
+      if (type === "success") {
+        bgColor = "bg-emerald-50 border-emerald-200 text-emerald-800";
+        icon = "fa-solid fa-circle-check text-emerald-500";
+      } else if (type === "error") {
+        bgColor = "bg-red-50 border-red-200 text-red-800";
+        icon = "fa-solid fa-circle-xmark text-red-500";
+      } else if (type === "warning") {
+        bgColor = "bg-amber-50 border-amber-200 text-amber-800";
+        icon = "fa-solid fa-circle-exclamation text-amber-500";
+      }
+
+      toast.className = `p-4 rounded-xl border flex items-center gap-3 shadow-lg transition-transform duration-300 transform translate-y-2 ${bgColor}`;
+      toast.innerHTML = `
+        <i class="${icon} text-lg"></i>
+        <div class="text-xs font-semibold">${message}</div>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 4000);
+    }
+
+    /**
+     * UPDATE RADIO BUTTON GROUP VIEW
+     */
+    function updateTipeAbsenSelector() {
+      const radios = document.getElementsByName("tipeAbsen");
+      radios.forEach(radio => {
+        const idLabel = radio.value === "Masuk" ? "lblTipeMasuk" : "lblTipePulang";
+        const labelEl = document.getElementById(idLabel);
+        if (radio.checked) {
+          labelEl.className = "border-2 border-indigo-600 rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer bg-indigo-50/50 text-indigo-600 font-bold transition";
+        } else {
+          labelEl.className = "border-2 border-slate-200 rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 font-semibold text-slate-600 transition";
+        }
+      });
+    }
+
+    /**
+     * REQUEST & CALCULATION GPS LOCATION
+     */
+    function requestGpsPermission() {
+      const statusText = document.getElementById("gpsStatusText");
+      const iconBox = document.getElementById("gpsIconBox");
+
+      if (!navigator.geolocation) {
+        statusText.innerText = "GPS tidak didukung perangkat";
+        showToast("Browser tidak mendukung geolokasi.", "error");
+        return;
+      }
+
+      statusText.innerText = "Meminta akses koordinat...";
+      
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          localLat = position.coords.latitude;
+          localLng = position.coords.longitude;
+          
+          // Kalkulasi Jarak ke Apartemen Purimas
+          localJarak = Math.round(calculateDistance(localLat, localLng, KANTOR_LAT, KANTOR_LNG));
+          
+          // Visual feedback
+          iconBox.className = "w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center text-green-600";
+          statusText.innerText = `Sukses (${localLat.toFixed(5)}, ${localLng.toFixed(5)})`;
+          
+          const jarakKalkulasiEl = document.getElementById("jarakKalkulasi");
+          if (localJarak <= 100) {
+            jarakKalkulasiEl.innerHTML = `<span class="text-emerald-600"><i class="fa-solid fa-circle-check"></i> Dalam Radius Kantor (${localJarak}m)</span>`;
+            showToast(`Lokasi Terverifikasi! Anda berada di dalam radius kantor (${localJarak} meter).`, "success");
+          } else {
+            jarakKalkulasiEl.innerHTML = `<span class="text-red-600"><i class="fa-solid fa-circle-xmark"></i> Luar Radius Kantor (${localJarak}m)</span>`;
+            showToast(`Perhatian! Anda berada ${localJarak} meter di luar radius kantor.`, "warning");
+          }
+
+          document.getElementById("radiusBanner").innerText = `Jarak Anda: ${localJarak}m`;
+          checkButtonAvailability();
+        },
+        (error) => {
+          iconBox.className = "w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-600";
+          document.getElementById("permissionGuide").classList.remove("hidden");
+          
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              statusText.innerText = "Akses ditolak pengguna";
+              showToast("Akses geolokasi ditolak. Berikan izin di browser.", "error");
+              break;
+            case error.POSITION_UNAVAILABLE:
+              statusText.innerText = "Informasi lokasi tidak valid";
+              showToast("Gagal memperoleh info lokasi.", "error");
+              break;
+            case error.TIMEOUT:
+              statusText.innerText = "Waktu permintaan habis";
+              showToast("Permintaan GPS timeout.", "error");
+              break;
+            default:
+              statusText.innerText = "Error GPS tidak dikenal";
+          }
+        },
+        options
+      );
+    }
+
+    /**
+     * FORMULA HAVERSINE (JAVASCRIPT CLIENT SIDE)
+     */
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // meter
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    /**
+     * CAMERA ACCESS
+     */
+    function requestCameraPermission() {
+      const video = document.getElementById("webcam");
+      const placeholder = document.getElementById("videoPlaceholder");
+      const camStatusText = document.getElementById("cameraStatusText");
+      const camIconBox = document.getElementById("camIconBox");
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        camStatusText.innerText = "Perangkat kamera tidak didukung";
+        showToast("Peramban Anda tidak mendukung penangkapan video.", "error");
+        return;
+      }
+
+      camStatusText.innerText = "Meminta izin kamera...";
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+        .then((stream) => {
+          mediaStreamGlobal = stream;
+          video.srcObject = stream;
+          video.classList.remove("hidden");
+          placeholder.classList.add("hidden");
+          
+          camStatusText.innerText = "Kamera aktif";
+          camIconBox.className = "w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center text-green-600";
+          
+          document.getElementById("captureBtn").disabled = false;
+          showToast("Kamera berhasil diaktifkan!", "success");
+        })
+        .catch((err) => {
+          camIconBox.className = "w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-600";
+          camStatusText.innerText = "Izin kamera ditolak";
+          document.getElementById("permissionGuide").classList.remove("hidden");
+          showToast("Gagal mengakses kamera. Berikan izin di browser.", "error");
+          console.error(err);
+        });
+    }
+
+    /**
+     * TAKE SNAPSHOT FROM VIDEO
+     */
+    function takeSelfie() {
+      const video = document.getElementById("webcam");
+      const snapshot = document.getElementById("selfieSnapshot");
+      
+      if (!mediaStreamGlobal) {
+        showToast("Kamera belum aktif!", "warning");
+        return;
+      }
+
+      // Buat canvas sementara
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext("2d");
+      
+      // Mirror image untuk selfie normal
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Ambil Base64 Data URL
+      localPhotoBase64 = canvas.toDataURL("image/png");
+      
+      // Tampilkan snapshot ke UI
+      snapshot.src = localPhotoBase64;
+      snapshot.classList.remove("hidden");
+      video.classList.add("hidden");
+
+      // Toggle Tombol
+      document.getElementById("captureBtn").classList.add("hidden");
+      document.getElementById("retakeBtn").classList.remove("hidden");
+      
+      showToast("Foto selfie berhasil ditangkap!", "success");
+      checkButtonAvailability();
+    }
+
+    function resetSelfie() {
+      const video = document.getElementById("webcam");
+      const snapshot = document.getElementById("selfieSnapshot");
+      
+      localPhotoBase64 = "";
+      snapshot.classList.add("hidden");
+      video.classList.remove("hidden");
+
+      document.getElementById("captureBtn").classList.remove("hidden");
+      document.getElementById("retakeBtn").classList.add("hidden");
+      
+      checkButtonAvailability();
+    }
+
+    /**
+     * VERIFIKASI KETERSEDIAAN UNTUK KIRIM DATA
+     */
+    function checkButtonAvailability() {
+      const submitBtn = document.getElementById("submitAttendanceBtn");
+      // Aktifkan tombol submit jika GPS sudah didapatkan dan selfie sudah difoto
+      if (localLat !== null && localLng !== null && localPhotoBase64 !== "") {
+        submitBtn.disabled = false;
+      } else {
+        submitBtn.disabled = true;
+      }
+    }
+
+    /**
+     * SUBMIT ATTENDANCE DATA TO GOOGLE APPS SCRIPT
+     */
+    function submitAttendance() {
+      const apiUrl = getApiUrl();
+      if (!apiUrl) {
+        showToast("Tautan API Apps Script belum diset! Silakan atur di bagian atas.", "error");
+        return;
+      }
+
+      const nama = document.getElementById("karyawanNama").value.trim();
+      const email = document.getElementById("karyawanEmail").value.trim();
+      
+      if (!nama || !email) {
+        showToast("Harap isi Nama dan Email Anda terlebih dahulu!", "warning");
+        return;
+      }
+
+      const radiosiTipe = document.getElementsByName("tipeAbsen");
+      let tipeSelected = "Masuk";
+      for (const rad of radiosiTipe) {
+        if (rad.checked) {
+          tipeSelected = rad.value;
+          break;
+        }
+      }
+
+      const btnSubmit = document.getElementById("submitAttendanceBtn");
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Mengirim Data...`;
+
+      const payload = {
+        action: "presensi",
+        nama: nama,
+        email: email,
+        tipe_absen: tipeSelected,
+        latitude: localLat,
+        longitude: localLng,
+        foto_base64: localPhotoBase64
+      };
+
+      fetch(apiUrl, {
+        method: "POST",
+        mode: "no-cors", // Bypass CORS di peramban, data terkirim secara opaque
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(() => {
+        // Karena no-cors, peramban mengembalikan response buram, tetapi data sukses masuk ke Apps Script
+        showToast(`Absensi '${tipeSelected}' berhasil dikirim ke database!`, "success");
+        resetSelfie();
+        
+        // Simpan nama/email terakhir di memory agar user tidak mengisi ulang
+        localStorage.setItem("last_nama", nama);
+        localStorage.setItem("last_email", email);
+        
+        // Reset state tombol
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Kirim Presensi`;
+      })
+      .catch((err) => {
+        showToast("Gagal melakukan koneksi dengan server API Apps Script.", "error");
+        console.error(err);
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Kirim Presensi`;
+      });
+    }
+
+    /**
+     * SUBMIT LEAVE REQUEST (CUTI/IZIN)
+     */
+    function submitCuti(event) {
+      event.preventDefault();
+      const apiUrl = getApiUrl();
+      if (!apiUrl) {
+        showToast("API Apps Script belum diset!", "error");
+        return;
+      }
+
+      const payload = {
+        action: "cuti",
+        nama: document.getElementById("cutiNama").value.trim(),
+        email: document.getElementById("cutiEmail").value.trim(),
+        jenis: document.getElementById("cutiJenis").value,
+        tanggal_mulai: document.getElementById("cutiMulai").value,
+        tanggal_selesai: document.getElementById("cutiSelesai").value,
+        keterangan: document.getElementById("cutiAlasan").value.trim()
+      };
+
+      const submitBtn = event.target.querySelector("button[type='submit']");
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Mengirim...`;
+
+      fetch(apiUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(() => {
+        showToast("Pengajuan Cuti berhasil dikirim!", "success");
+        document.getElementById("formCuti").reset();
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Kirim Pengajuan Cuti`;
+      })
+      .catch((err) => {
+        showToast("Gagal mengirim pengajuan cuti.", "error");
+        console.error(err);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Kirim Pengajuan Cuti`;
+      });
+    }
+
+    /**
+     * FETCH REKAP DATA (REAL-TIME READ)
+     */
+    function fetchRekapData() {
+      const apiUrl = getApiUrl();
+      if (!apiUrl) {
+        showToast("Untuk melihat Dashboard Rekap, isi Endpoint API Apps Script terlebih dahulu.", "warning");
+        return;
+      }
+
+      const tableBody = document.getElementById("rekapTableBody");
+      const cardsContainer = document.getElementById("rekapCardsContainer");
+      
+      tableBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-indigo-600"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Mengambil Data dari Google Sheets...</td></tr>`;
+      cardsContainer.innerHTML = `<div class="p-6 text-center text-indigo-600"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Mengambil Data...</div>`;
+
+      // Gunakan GET atau POST fallback untuk fetch rekap data (CORS Proxy aman karena JSONP / standard fetch)
+      fetch(`${apiUrl}?action=get_rekap`)
+        .then(res => res.json())
+        .then(res => {
+          if (res.success && res.data) {
+            globalPresensiData = res.data.presensi || [];
+            
+            // Set statistik
+            document.getElementById("statHadir").innerText = res.data.statistik.hadirMasuk;
+            document.getElementById("statLuar").innerText = res.data.statistik.totalLuarRadius;
+            document.getElementById("statCuti").innerText = res.data.statistik.totalCuti;
+
+            renderTable(globalPresensiData);
+          } else {
+            // Jika direct GET bermasalah, kita pakai POST payload
+            fetchWithPostFallback();
+          }
+        })
+        .catch(err => {
+          // Fallback ke POST jika GET diblokir CORS pada apps script
+          fetchWithPostFallback();
+        });
+    }
+
+    function fetchWithPostFallback() {
+      const apiUrl = getApiUrl();
+      const payload = { action: "get_rekap" };
+
+      // Karena POST normal tanpa no-cors membutuhkan penanganan preflight OPTIONS di GAS
+      fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8" // Trick aman untuk menghindari preflight jika CORS bermasalah
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data) {
+          globalPresensiData = res.data.presensi || [];
+          document.getElementById("statHadir").innerText = res.data.statistik.hadirMasuk;
+          document.getElementById("statLuar").innerText = res.data.statistik.totalLuarRadius;
+          document.getElementById("statCuti").innerText = res.data.statistik.totalCuti;
+          renderTable(globalPresensiData);
+        } else {
+          showErrorInTable("Gagal membaca payload database.");
+        }
+      })
+      .catch(err => {
+        showErrorInTable("Gagal terhubung dengan server API: " + err.toString());
+      });
+    }
+
+    function showErrorInTable(msg) {
+      document.getElementById("rekapTableBody").innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ${msg}</td></tr>`;
+    }
+
+    /**
+     * RENDER DATA KE TABEL & MOBILE CARDS
+     */
+    function renderTable(data) {
+      const tableBody = document.getElementById("rekapTableBody");
+      const cardsContainer = document.getElementById("rekapCardsContainer");
+      
+      tableBody.innerHTML = "";
+      cardsContainer.innerHTML = "";
+
+      if (data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400">Tidak ada riwayat presensi cocok.</td></tr>`;
+        cardsContainer.innerHTML = `<div class="p-8 text-center text-slate-400">Tidak ada data.</div>`;
+        return;
+      }
+
+      data.forEach(item => {
+        const isLuar = item["Status Lokasi"] === "Luar Radius Kantor";
+        const badgeLoc = isLuar 
+          ? `<span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-red-100 text-red-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Luar Kantor</span>`
+          : `<span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700"><i class="fa-solid fa-circle-check mr-1"></i>Dalam Kantor</span>`;
+
+        const badgeType = item["Tipe Absen"] === "Masuk"
+          ? `<span class="px-2 py-0.5 text-xs font-semibold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100"><i class="fa-solid fa-right-to-bracket mr-1"></i>Masuk</span>`
+          : `<span class="px-2 py-0.5 text-xs font-semibold rounded-md bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-right-from-bracket mr-1"></i>Pulang</span>`;
+
+        const linkFoto = item["Link Foto"] && item["Link Foto"].startsWith("http")
+          ? `<a href="${item["Link Foto"]}" target="_blank" class="text-indigo-600 hover:underline font-semibold text-xs flex items-center gap-1"><i class="fa-solid fa-image"></i> Lihat Foto</a>`
+          : `<span class="text-slate-400 text-xs">Tidak Ada</span>`;
+
+        // Baris Desktop
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50/50 transition border-b border-slate-100";
+        tr.innerHTML = `
+          <td class="p-4">
+            <div class="font-semibold text-slate-900">${item["Tanggal"]}</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">${item["Jam"]}</div>
+          </td>
+          <td class="p-4">
+            <div class="font-bold text-slate-800">${item["Nama"]}</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">${item["Email"]}</div>
+          </td>
+          <td class="p-4">${badgeType}</td>
+          <td class="p-4 font-semibold text-xs text-slate-600">${item["Jarak (Meter)"]} meter</td>
+          <td class="p-4">${badgeLoc}</td>
+          <td class="p-4">${linkFoto}</td>
+        `;
+        tableBody.appendChild(tr);
+
+        // Card Mobile
+        const card = document.createElement("div");
+        card.className = "p-4 space-y-3";
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-bold text-slate-900 text-base">${item["Nama"]}</div>
+              <div class="text-xs text-slate-500">${item["Email"]}</div>
+            </div>
+            <div>${badgeType}</div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2 rounded-lg">
+            <div>
+              <span class="text-slate-400 block text-[10px] uppercase">Waktu</span>
+              <span class="font-semibold text-slate-700">${item["Tanggal"]} ${item["Jam"]}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px] uppercase">Jarak Jangkauan</span>
+              <span class="font-semibold text-slate-700">${item["Jarak (Meter)"]} m</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <div>${badgeLoc}</div>
+            <div>${linkFoto}</div>
+          </div>
+        `;
+        cardsContainer.appendChild(card);
+      });
+    }
+
+    /**
+     * SEARCH FILTER
+     */
+    function filterRekap() {
+      const q = document.getElementById("rekapSearch").value.toLowerCase();
+      const filtered = globalPresensiData.filter(item => {
+        return item["Nama"].toLowerCase().includes(q) || item["Email"].toLowerCase().includes(q);
+      });
+      renderTable(filtered);
+    }
+
+    /**
+     * EXPORT TO CSV UTILITY
+     */
+    function exportToCsv() {
+      if (globalPresensiData.length === 0) {
+        showToast("Tidak ada data untuk diexport!", "warning");
+        return;
+      }
+
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "ID,Tanggal,Jam,Nama,Email,Tipe Absen,Latitude,Longitude,Jarak,Status Lokasi,Link Foto\n";
+
+      globalPresensiData.forEach(item => {
+        const row = [
+          item["ID"] || "",
+          item["Tanggal"] || "",
+          item["Jam"] || "",
+          `"${item["Nama"] || ""}"`,
+          item["Email"] || "",
+          item["Tipe Absen"] || "",
+          item["Latitude"] || "",
+          item["Longitude"] || "",
+          item["Jarak (Meter)"] || "",
+          item["Status Lokasi"] || "",
+          item["Link Foto"] || ""
+        ].join(",");
+        csvContent += row + "\n";
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Rekap_Presensi_Karyawan_${new Date().toISOString().substring(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Data Rekap berhasil diexport ke CSV!", "success");
+    }
+  </script>
+</body>
+</html>
